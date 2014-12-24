@@ -8,6 +8,7 @@ normal sort + token sort (seems less accurate)
 '''
 
 from extractors import miner, pdf2, pdfbox, textstream, xpdf
+import os
 import cProfile
 import pstats
 import StringIO
@@ -50,13 +51,25 @@ def run_all(pdf_file, txt_file):
     pdf2_default(pdf_file, txt_file)
     pdfbox_default(pdf_file, txt_file)
 
-def time_all(pdf_file, txt_file):
+def time_all(pdf_file):
     methods = ['miner_with_layout', 'miner_without_layout', 'xpdf_with_layout', 
     'xpdf_without_layout', 'textstream_default', 'pdf2_default', 'pdfbox_default']
 
+    base_name = os.path.basename(pdf_file)
+    directory_name = os.path.dirname(pdf_file)
+
+    # i.e. 'pride_and_prej' from './input/pride_and_prej/1.pdf'
+    shorter_directory_name = os.path.basename(directory_name)
+    # i.e. '1' from './input/pride_and_prej/1.pdf'
+    file_base_name = os.path.splitext(base_name)[0]
+
     output = ''
+
     for method in methods:
-        command = method + '(pdf_file, txt_file)'
+        # build file path based on source text, input PDF, and method employed
+        txt_file = './output/' + shorter_directory_name + '/' + method + '/' + file_base_name + '.txt'
+
+        command = method + '(\'%s\', \'%s\')' % (pdf_file, txt_file)
         temp = 'statsfile'
         cProfile.run(command, temp)
 
@@ -66,9 +79,13 @@ def time_all(pdf_file, txt_file):
         stats.sort_stats('time')
         output = output + method + '\n-------------------------------------\n' + stream.getvalue()
 
-    print output
+    # clean up intermediary file
+    os.remove('statsfile')
+
+    # write results to log file
+    with open('./stats/' + shorter_directory_name + '/' + file_base_name + '_speed_log.txt', "w") as log_file:
+        log_file.write(output)
 
 if __name__ == '__main__': 
     pdf_file = './input/pride_and_prej/1.pdf'
-    txt_file = 'tester.txt'
-    time_all(pdf_file, txt_file)
+    time_all(pdf_file)
